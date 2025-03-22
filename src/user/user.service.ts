@@ -1,25 +1,36 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { User as UserEntity } from '@prisma/client';
+import { EditUserDto } from './dto';
 
 @Injectable()
 export class UserService {
     constructor(private readonly prismaService: PrismaService) { }
 
-    async getMe(decoded_token: any) {
+    async getMe(user: UserEntity) {
+        return user;
+    }
+
+    async updateMe(userId: number, body: EditUserDto) {
+        // check if the user exists
         const user = await this.prismaService.user.findUnique({
-            where: {
-                id: decoded_token.sub
-            }
+            where: { id: userId }
         });
 
         if (!user) {
-            return {
-                message: 'User not found!'
-            }
+            throw new Error('User not found');
         }
 
-        delete user.hash;
+        // update the user
+        const updatedUser = await this.prismaService.user.update({
+            where: { id: userId },
+            data: body
+        });
 
-        return user;
+        delete updatedUser.hash;
+
+        // return the updated user
+        return updatedUser;
     }
+
 }
